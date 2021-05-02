@@ -5,6 +5,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const OptimizeCssAssetWebpackPlugin = require('optimize-css-assets-webpack-plugin')
 const TerserWebpackPlugin = require('terser-webpack-plugin')
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer')
 
 const isDev = process.env.NODE_ENV === 'development'
 const isProd = !isDev
@@ -49,7 +50,8 @@ const cssLoaders = extra => {
 const babelOptions = preset => {
     const opts = {
         presets: [
-            '@babel/preset-env'
+            '@babel/preset-env',
+            '@babel/preset-typescript'
         ],
         plugins: [
             '@babel/plugin-proposal-class-properties'
@@ -76,29 +78,21 @@ const jsLoaders = () => {
     return loaders
 }
 
-module.exports = {
-    context: path.resolve(__dirname, 'src'),
-    entry: {
-        main: ['@babel/polyfill', './index.js'],
-        analytics: './analytics.js'
-    },
-    output: {
-        filename: filename('js'),
-        path: path.resolve(__dirname, 'dist')
-    },
-    resolve: {
-        extensions: ['.js', '.json', '.png'],
-        alias: {
-            '@models': path.resolve(__dirname, 'src/models'),
-            '@': path.resolve(__dirname, 'src')
-        }
-    },
-    optimization: optimization(),
-    devServer: {
-        port: 4200,
-        hot: isDev
-    },
-    plugins: [
+const reactLoaders = () => {
+    const loaders = [{
+        loader: 'babel-loader',
+        options: babelOptions('@babel/preset-react')
+    }]
+
+    if (isDev) {
+        loaders.push('eslint-loader')
+    }
+
+    return loaders
+}
+
+const plugins = () => {
+    const base = [
         new HTMLWebpackPlugin({
             template: "./index.html",
             minify: {
@@ -117,7 +111,37 @@ module.exports = {
         new MiniCssExtractPlugin({
             filename: filename('css'),
         })
-    ],
+    ];
+    if (isProd) {
+        base.push(new BundleAnalyzerPlugin())
+    }
+    return base
+}
+
+module.exports = {
+    context: path.resolve(__dirname, 'src'),
+    entry: {
+        main: ['@babel/polyfill', './index.jsx'],
+        analytics: './analytics.ts'
+    },
+    output: {
+        filename: filename('js'),
+        path: path.resolve(__dirname, 'dist')
+    },
+    resolve: {
+        extensions: ['.js', '.json', '.png'],
+        alias: {
+            '@models': path.resolve(__dirname, 'src/models'),
+            '@': path.resolve(__dirname, 'src')
+        }
+    },
+    optimization: optimization(),
+    devServer: {
+        port: 4200,
+        hot: isDev
+    },
+    plugins: plugins(),
+    devtool: isDev ? 'source-map' : '',
     module: {
         rules: [
             {
@@ -149,9 +173,14 @@ module.exports = {
                 use: ['csv-loader']
             },
             {
-                test: /\.js$/,
+                test: /\.(js|ts)$/,
                 exclude: /node_modules/,
                 use: jsLoaders()
+            },
+            {
+                test: /\.(jsx)$/,
+                exclude: /node_modules/,
+                use: reactLoaders()
             },
         ]
     }
