@@ -49,7 +49,8 @@ const cssLoaders = extra => {
 const babelOptions = preset => {
     const opts = {
         presets: [
-            '@babel/preset-env'
+            '@babel/preset-env',
+            '@babel/preset-typescript'
         ],
         plugins: [
             '@babel/plugin-proposal-class-properties'
@@ -76,11 +77,24 @@ const jsLoaders = () => {
     return loaders
 }
 
+const reactLoaders = () => {
+    const loaders = [{
+        loader: 'babel-loader',
+        options: babelOptions('@babel/preset-react')
+    }]
+
+    if (isDev) {
+        loaders.push('eslint-loader')
+    }
+
+    return loaders
+}
+
 module.exports = {
     context: path.resolve(__dirname, 'src'),
     entry: {
-        main: ['@babel/polyfill', './index.js'],
-        analytics: './analytics.js'
+        main: ['@babel/polyfill', './index.jsx'],
+        analytics: './analytics.ts'
     },
     output: {
         filename: filename('js'),
@@ -149,9 +163,14 @@ module.exports = {
                 use: ['csv-loader']
             },
             {
-                test: /\.js$/,
+                test: /\.(js|ts)$/,
                 exclude: /node_modules/,
                 use: jsLoaders()
+            },
+            {
+                test: /\.(jsx)$/,
+                exclude: /node_modules/,
+                use: reactLoaders()
             },
         ]
     }
