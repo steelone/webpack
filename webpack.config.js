@@ -141,7 +141,7 @@ module.exports = {
         hot: isDev
     },
     plugins: plugins(),
-    devtool: isDev ? 'source-map' : '',
+    devtool: isDev ? 'source-map' : false,
     module: {
         rules: [
             {
